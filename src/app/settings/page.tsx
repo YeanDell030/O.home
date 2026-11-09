@@ -61,9 +61,156 @@ import { FIRESTORE_RULES, STORAGE_RULES } from '@/lib/firebaseRules';
 import { SCHEMA_SQL } from '@/lib/schemaSql';
 
 const CATEGORIES = [
-  '디자인', '메인 페이지', '위젯', '메뉴 관리', '게시판 관리', '자관 질문', '커미션', 'TRPG', '감상타래', '메모장',
+  '디자인', '메인 페이지', '위젯', '메뉴 관리', '게시판 관리', 'Courses','자관 질문', '커미션', 'TRPG', '감상타래', '메모장',
   '폰트', '마우스 커서', 'BGM', '무드 리스트', '회원/보안', '데이터 백업',
 ] as const;
+
+type CourseSettingType =
+  | 'course'
+  | 'workshop'
+  | 'lecture';
+
+interface CourseBadgeSetting {
+  label: string;
+  bg: string;
+  border: string;
+  fg: string;
+}
+
+interface InstitutionBadgeSetting {
+  bg: string;
+  border: string;
+  fg: string;
+}
+
+interface CoursePageSettings {
+  showInstitutionBadge: boolean;
+
+  types: Record<
+    CourseSettingType,
+    CourseBadgeSetting
+  >;
+
+  institutions: Record<
+    string,
+    InstitutionBadgeSetting
+  >;
+
+  defaultInstitution: InstitutionBadgeSetting;
+}
+
+/*
+ * Courses 게시글에서 학교 이름을 가져오기 위한
+ * 최소한의 자료형입니다.
+ */
+interface CourseSettingItem {
+  id: string;
+  institution?: string;
+}
+
+const COURSE_SETTING_KEY = 'ohome.courseset.v1';
+const COURSE_CONTENT_KEY = 'ohome.commapply.v1';
+
+const DEFAULT_COURSE_SETTINGS: CoursePageSettings = {
+  showInstitutionBadge: true,
+
+  types: {
+    course: {
+      label: 'COURSE',
+      bg: '#e7f5ff',
+      border: '#74c0fc',
+      fg: '#1864ab',
+    },
+
+    workshop: {
+      label: 'WORKSHOP',
+      bg: '#e6fcf5',
+      border: '#63e6be',
+      fg: '#087f5b',
+    },
+
+    lecture: {
+      label: 'SPECIAL LECTURE',
+      bg: '#fff4e6',
+      border: '#ffb366',
+      fg: '#a65300',
+    },
+  },
+
+  institutions: {},
+
+  defaultInstitution: {
+    bg: '#f1f3f5',
+    border: '#ced4da',
+    fg: '#495057',
+  },
+};
+
+const COURSE_TYPE_NAMES: Record<
+  CourseSettingType,
+  string
+> = {
+  course: 'Course',
+  workshop: 'Workshop',
+  lecture: 'Special Lecture',
+};
+
+/*
+ * 저장된 설정에 일부 항목이 없더라도
+ * 기본 설정과 합쳐서 안전하게 불러옵니다.
+ */
+function loadCoursePageSettings(): CoursePageSettings {
+  const saved = getSetting<
+    Partial<CoursePageSettings>
+  >(COURSE_SETTING_KEY, {});
+
+  return {
+    showInstitutionBadge:
+      saved.showInstitutionBadge ?? true,
+
+    types: {
+      course: {
+        ...DEFAULT_COURSE_SETTINGS.types.course,
+        ...saved.types?.course,
+      },
+
+      workshop: {
+        ...DEFAULT_COURSE_SETTINGS.types.workshop,
+        ...saved.types?.workshop,
+      },
+
+      lecture: {
+        ...DEFAULT_COURSE_SETTINGS.types.lecture,
+        ...saved.types?.lecture,
+      },
+    },
+
+    institutions: saved.institutions ?? {},
+
+    defaultInstitution: {
+      ...DEFAULT_COURSE_SETTINGS.defaultInstitution,
+      ...saved.defaultInstitution,
+    },
+  };
+}
+
+function courseBadgeStyle(
+  badge: CourseBadgeSetting | InstitutionBadgeSetting
+): React.CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '5px 10px',
+    borderRadius: 999,
+    background: badge.bg,
+    border: `1px solid ${badge.border}`,
+    color: badge.fg,
+    fontSize: 10,
+    fontWeight: 700,
+    lineHeight: 1.2,
+    whiteSpace: 'nowrap',
+  };
+}
 
 /** 색 항목 한 쌍 렌더 헬퍼 */
 function CP({ label, k, def }: { label?: string; k: keyof ThemeVars; def?: string }) {
@@ -647,6 +794,512 @@ function WidgetsPane() {
   );
 }
 
+/**
+ * Courses 설정
+ *
+ * - 강의 유형 말머리의 이름과 색상
+ * - 학교 이름 배지 표시 여부
+ * - 학교별 배지 색상
+ * - 새 학교의 기본 배지 색상
+ */
+function CoursesPane() {
+  const toast = useToast();
+
+  /*
+   * Courses 페이지에 작성된 게시글을 불러옵니다.
+   * 게시글을 수정하는 것이 아니라 학교 이름 목록만 추출합니다.
+   */
+  const [courses] =
+    useLocalList<CourseSettingItem>(
+      COURSE_CONTENT_KEY,
+      []
+    );
+
+  const [settings, setCourseSettings] =
+    useState<CoursePageSettings>(
+      () => loadCoursePageSettings()
+    );
+
+  /*
+   * 화면 상태와 서버 설정을 동시에 저장합니다.
+   */
+  const commit = (next: CoursePageSettings) => {
+    setCourseSettings(next);
+    setSetting(COURSE_SETTING_KEY, next);
+  };
+
+  const patchType = (
+    type: CourseSettingType,
+    patch: Partial<CourseBadgeSetting>
+  ) => {
+    commit({
+      ...settings,
+
+      types: {
+        ...settings.types,
+
+        [type]: {
+          ...settings.types[type],
+          ...patch,
+        },
+      },
+    });
+  };
+
+  const patchDefaultInstitution = (
+    patch: Partial<InstitutionBadgeSetting>
+  ) => {
+    commit({
+      ...settings,
+
+      defaultInstitution: {
+        ...settings.defaultInstitution,
+        ...patch,
+      },
+    });
+  };
+
+  const patchInstitution = (
+    institution: string,
+    patch: Partial<InstitutionBadgeSetting>
+  ) => {
+    const current =
+      settings.institutions[institution] ??
+      settings.defaultInstitution;
+
+    commit({
+      ...settings,
+
+      institutions: {
+        ...settings.institutions,
+
+        [institution]: {
+          ...current,
+          ...patch,
+        },
+      },
+    });
+  };
+
+  const resetInstitution = (
+    institution: string
+  ) => {
+    const nextInstitutions = {
+      ...settings.institutions,
+    };
+
+    delete nextInstitutions[institution];
+
+    commit({
+      ...settings,
+      institutions: nextInstitutions,
+    });
+
+    toast(
+      `「${institution}」 배지를 기본 색상으로 되돌렸습니다`
+    );
+  };
+
+  const resetAllCourseSettings = () => {
+    const next: CoursePageSettings = {
+      showInstitutionBadge:
+        DEFAULT_COURSE_SETTINGS.showInstitutionBadge,
+
+      types: {
+        course: {
+          ...DEFAULT_COURSE_SETTINGS.types.course,
+        },
+
+        workshop: {
+          ...DEFAULT_COURSE_SETTINGS.types.workshop,
+        },
+
+        lecture: {
+          ...DEFAULT_COURSE_SETTINGS.types.lecture,
+        },
+      },
+
+      institutions: {},
+
+      defaultInstitution: {
+        ...DEFAULT_COURSE_SETTINGS.defaultInstitution,
+      },
+    };
+
+    commit(next);
+
+    toast('Courses 설정을 초기화했습니다');
+  };
+
+  /*
+   * 게시글에서 학교 이름을 가져오고,
+   * 중복된 학교는 한 번만 표시합니다.
+   */
+  const institutions = Array.from(
+    new Set(
+      courses
+        .map(course =>
+          course.institution?.trim()
+        )
+        .filter(
+          (institution): institution is string =>
+            Boolean(institution)
+        )
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const typeOrder: CourseSettingType[] = [
+    'course',
+    'workshop',
+    'lecture',
+  ];
+
+  const colorFields = (
+    badge:
+      | CourseBadgeSetting
+      | InstitutionBadgeSetting,
+    patch: (
+      next: Partial<InstitutionBadgeSetting>
+    ) => void
+  ) => (
+    <>
+      <span className="cp-lb">배경</span>
+
+      <ColorField
+        value={badge.bg}
+        onChange={hex =>
+          patch({
+            bg: hex,
+          })
+        }
+      />
+
+      <span className="cp-lb">테두리</span>
+
+      <ColorField
+        value={badge.border}
+        onChange={hex =>
+          patch({
+            border: hex,
+          })
+        }
+      />
+
+      <span className="cp-lb">글씨</span>
+
+      <ColorField
+        value={badge.fg}
+        onChange={hex =>
+          patch({
+            fg: hex,
+          })
+        }
+      />
+    </>
+  );
+
+  return (
+    <div className="set-sec">
+      <h3>Courses</h3>
+
+      <div className="d">
+        Courses 페이지의 말머리 이름과 색상,
+        학교 배지 색상을 관리합니다.
+        변경 내용은 즉시 저장되며 방문자에게도
+        동일하게 표시됩니다.
+      </div>
+
+      <div className="set-row">
+        <div className="l">
+          <b>학교 이름 배지</b>
+
+          <small>
+            켜면 학교 이름을 색상이 있는 배지로
+            표시하고, 끄면 일반 글자로 표시합니다
+          </small>
+        </div>
+
+        <KToggle
+          checked={
+            settings.showInstitutionBadge
+          }
+          onChange={checked =>
+            commit({
+              ...settings,
+              showInstitutionBadge: checked,
+            })
+          }
+        />
+      </div>
+
+      <hr
+        style={{
+          margin: '24px 0',
+          border: 'none',
+          borderTop:
+            '1.5px solid var(--line)',
+        }}
+      />
+
+      <h3>강의 유형 말머리</h3>
+
+      <div className="d">
+        Course, Workshop, Special Lecture의
+        표시 이름과 배지 색상을 변경합니다.
+      </div>
+
+      {typeOrder.map(type => {
+        const badge = settings.types[type];
+
+        return (
+          <div
+            key={type}
+            className="set-row"
+            style={{
+              flexWrap: 'wrap',
+            }}
+          >
+            <div
+              className="l"
+              style={{
+                display: 'flex',
+                gap: 11,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span
+                style={courseBadgeStyle(badge)}
+              >
+                {badge.label || '말머리'}
+              </span>
+
+              <small>
+                {COURSE_TYPE_NAMES[type]}
+              </small>
+            </div>
+
+            <div
+              className="cp-group"
+              style={{
+                justifyContent: 'flex-end',
+                flexWrap: 'wrap',
+              }}
+            >
+              <KInput
+                value={badge.label}
+                placeholder={
+                  COURSE_TYPE_NAMES[type]
+                }
+                onChange={event =>
+                  patchType(type, {
+                    label: event.target.value,
+                  })
+                }
+                style={{
+                  width: 145,
+                  textAlign: 'right',
+                }}
+              />
+
+              {colorFields(
+                badge,
+                patch =>
+                  patchType(type, patch)
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      <hr
+        style={{
+          margin: '24px 0',
+          border: 'none',
+          borderTop:
+            '1.5px solid var(--line)',
+        }}
+      />
+
+      <h3>새 학교 기본 배지</h3>
+
+      <div className="d">
+        아직 별도의 색상을 지정하지 않은 학교와
+        앞으로 새로 추가되는 학교에 자동으로
+        적용됩니다.
+      </div>
+
+      <div
+        className="set-row"
+        style={{
+          flexWrap: 'wrap',
+        }}
+      >
+        <div className="l">
+          <span
+            style={courseBadgeStyle(
+              settings.defaultInstitution
+            )}
+          >
+            New Institution
+          </span>
+        </div>
+
+        <div
+          className="cp-group"
+          style={{
+            justifyContent: 'flex-end',
+            flexWrap: 'wrap',
+          }}
+        >
+          {colorFields(
+            settings.defaultInstitution,
+            patch =>
+              patchDefaultInstitution(patch)
+          )}
+        </div>
+      </div>
+
+      <hr
+        style={{
+          margin: '24px 0',
+          border: 'none',
+          borderTop:
+            '1.5px solid var(--line)',
+        }}
+      />
+
+      <h3>학교별 배지</h3>
+
+      <div className="d">
+        Courses 게시글에 입력된 학교를 자동으로
+        가져옵니다. 새 학교의 강의를 등록하면
+        이 목록에도 자동으로 나타납니다.
+      </div>
+
+      {institutions.length > 0 ? (
+        institutions.map(institution => {
+          const custom =
+            settings.institutions[
+              institution
+            ];
+
+          const badge =
+            custom ??
+            settings.defaultInstitution;
+
+          return (
+            <div
+              key={institution}
+              className="set-row"
+              style={{
+                flexWrap: 'wrap',
+              }}
+            >
+              <div
+                className="l"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 9,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span
+                  style={courseBadgeStyle(
+                    badge
+                  )}
+                >
+                  {institution}
+                </span>
+
+                {!custom && (
+                  <span className="pill">
+                    기본색
+                  </span>
+                )}
+              </div>
+
+              <div
+                className="cp-group"
+                style={{
+                  justifyContent:
+                    'flex-end',
+                  flexWrap: 'wrap',
+                }}
+              >
+                {colorFields(
+                  badge,
+                  patch =>
+                    patchInstitution(
+                      institution,
+                      patch
+                    )
+                )}
+
+                {custom && (
+                  <button
+                    className="btn btn-ghost"
+                    style={{
+                      padding:
+                        '4px 10px',
+                      fontSize: 10.5,
+                    }}
+                    onClick={() =>
+                      resetInstitution(
+                        institution
+                      )
+                    }
+                  >
+                    기본색
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <p className="hint">
+          Courses 페이지에 등록된 학교가
+          없습니다. 강의를 먼저 등록하면 학교
+          목록이 자동으로 나타납니다.
+        </p>
+      )}
+
+      <hr
+        style={{
+          margin: '24px 0',
+          border: 'none',
+          borderTop:
+            '1.5px solid var(--line)',
+        }}
+      />
+
+      <div className="set-row">
+        <div className="l">
+          <b>Courses 설정 초기화</b>
+
+          <small>
+            말머리와 학교 배지 색상을 처음
+            상태로 되돌립니다
+          </small>
+        </div>
+
+        <button
+          className="btn btn-ghost"
+          style={{
+            padding: '7px 13px',
+            fontSize: 11,
+          }}
+          onClick={resetAllCourseSettings}
+        >
+          RESET
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** 게시판 관리 탭 (5.2) — 게시판 생성·삭제·스킨·권한 + 게시판별 말머리 + 뱃지 색 */
 function BoardPane() {
   const {
@@ -833,6 +1486,8 @@ function BoardPane() {
     </div>
   );
 }
+
+
 
 /** 자관 질문 탭 (v1.9) — 질문 세트(CP/NCP) 관리. 자관 상세의 QUESTIONS 섹션 추가 시 세트를 골라 넣는다 */
 function RelQPane() {
@@ -3326,6 +3981,8 @@ function SettingsInner() {
             <MenuPane />
           ) : tab === '게시판 관리' ? (
             <BoardPane />
+          ) : tab === 'Courses' ? (
+            <CoursesPane />
           ) : tab === '자관 질문' ? (
             <RelQPane />
           ) : tab === '커미션' ? (
