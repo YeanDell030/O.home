@@ -80,7 +80,7 @@ function BackupPageInner() {
     <section className="page">
       <div className="page-head">
         <PageTitle>{sec.id === 'main' ? 'GALLERY' : sec.name}</PageTitle>
-        <EditableDesc k="backup-desc" def="로그형(웹툰 스크롤) / 단일형(좌우 넘김) · 리스트/갤러리 보기 전환" />
+        <EditableDesc k={sec.id === 'main' ? 'backup-desc' : `backup-desc-${sec.id}`} def="Add a short description for this page." />
       </div>
       <div className="toolrow">
         <div className="seg">
