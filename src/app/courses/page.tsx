@@ -528,26 +528,28 @@ export default function CoursesPage() {
                 onChange={value =>
                   setDraft({
                     ...draft,
-                    type:
+                    type: 
                       value as CourseType,
                   })
                 }
                 options={[
                   {
                     value: 'course',
-                    label: 'Course',
+                    label:
+                      courseSettings.types.course.label,
                   },
                   {
                     value: 'workshop',
-                    label: 'Workshop',
+                    label:
+                      courseSettings.types.workshop.label,
                   },
                   {
                     value: 'lecture',
                     label:
-                      'Special Lecture',
+                      courseSettings.types.lecture.label,
                   },
                 ]}
-              />
+                />
             </div>
           </div>
 
