@@ -57,7 +57,7 @@ function CharsInner() {
     <section className="page">
       <div className="page-head">
         <PageTitle>{sec.id === 'main' ? 'CHARACTERS' : sec.name}</PageTitle>
-        <EditableDesc k="chars-desc" def="운영자의 자캐 목록 · 3:4 두상 썸네일 · 클릭 시 프로필로 이동" />
+        <EditableDesc  k={sec.id === 'main' ? 'chars-desc' : `chars-desc-${sec.id}`}  def="Selected student projects developed through courses, workshops, and creative practice."/>
         <div className="head-actions">
           <SearchBar onSearch={setQ} />
           {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/chars/new' + secQuery('chars', sec.id))}>＋ ADD CHARACTER</button>}
