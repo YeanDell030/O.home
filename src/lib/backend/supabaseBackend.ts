@@ -1,7 +1,7 @@
 'use client';
 // Supabase 백엔드 — Postgres 테이블(행 단위) + Auth + Storage + Realtime
 // 스키마·권한: supabase/schema.sql
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import {
   Backend, BackendCheck, BackendConfig, BackendUser, ListItem, diffList, metaOf,
 } from './types';
@@ -15,6 +15,14 @@ export async function createSupabaseBackend(
 ): Promise<Backend> {
   const { createBrowserClient } = await import('@supabase/ssr');
   const sb: SupabaseClient = createBrowserClient(cfg.url.replace(/\/$/, ''), cfg.anonKey);
+  // 동일한 컬렉션을 여러 컴포넌트가 동시에 구독할 수 있으므로
+  // Supabase 채널은 하나만 만들고 변경 알림을 여러 구독자에게 전달한다.
+  const realtime = new Map<string, {
+    channel: RealtimeChannel;
+    listeners: Set<() => void>;
+  }>();
+
+  let realtimeSeq = 0;
 
   const toUser = async (u: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null | undefined): Promise<BackendUser | null> => {
     if (!u) return null;
@@ -203,11 +211,57 @@ export async function createSupabaseBackend(
     },
 
     subscribe(coll, onChange) {
-      const ch = sb.channel(`ohome:${coll}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: coll }, () => onChange())
-        .subscribe();
-      return () => { void sb.removeChannel(ch); };
-    },
+  let entry = realtime.get(coll);
+
+  if (!entry) {
+    const listeners = new Set<() => void>();
+
+    // React Strict Mode에서 해제 직후 다시 구독하더라도
+    // 이전 채널 이름과 충돌하지 않도록 고유 번호를 붙인다.
+    const channel = sb
+      .channel(`ohome:${coll}:${++realtimeSeq}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: coll,
+        },
+        () => {
+          listeners.forEach(listener => listener());
+        },
+      )
+      .subscribe();
+
+    entry = {
+      channel,
+      listeners,
+    };
+
+    realtime.set(coll, entry);
+  }
+
+  entry.listeners.add(onChange);
+
+  let active = true;
+
+  return () => {
+    if (!active) return;
+    active = false;
+
+    const current = realtime.get(coll);
+    if (!current) return;
+
+    current.listeners.delete(onChange);
+
+    // 이 컬렉션을 사용하는 화면이 더 이상 없을 때만
+    // Supabase 채널을 완전히 제거한다.
+    if (current.listeners.size === 0) {
+      realtime.delete(coll);
+      void sb.removeChannel(current.channel);
+    }
+  };
+},
 
     async fetchSetting<T>(key: string) {
       const { data, error } = await sb.from('site_settings').select('value').eq('key', key).maybeSingle();
