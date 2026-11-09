@@ -82,7 +82,7 @@ function DotoriPageInner() {
     <section className="page" onClick={() => setStatusFor(null)}>
       <div className="page-head">
         <PageTitle>{sec.id === 'main' ? 'DOTORI' : sec.name}</PageTitle>
-        <EditableDesc k="dotori-desc" def="가고 싶은 시나리오 저장함 — 도토리처럼 모아두기" />
+        <EditableDesc  k={sec.id === 'main' ? 'dotori-desc' : `dotori-desc-${sec.id}`}  def="Journal articles, conference papers, and other scholarly publications."/>
       </div>
 
       {/* 상태 필터 탭 + 검색·ADD — 필터 줄 오른쪽 정렬 (v1.9 사용자 요청) */}
