@@ -1807,3 +1807,153 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .up-busy{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);z-index:121;display:flex;align-items:center;gap:9px;padding:10px 18px;border-radius:999px;background:var(--dd-bg);color:var(--dd-fg);font-size:calc(12.5px*var(--fs,1));box-shadow:0 10px 30px rgba(0,0,0,.3);border:1px solid var(--line-dark);backdrop-filter:blur(8px)}
 .up-spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--line-dark);border-top-color:var(--accent);animation:upSpin .7s linear infinite;flex-shrink:0}
 @keyframes upSpin{to{transform:rotate(360deg)}}
+
+/* ---------- Courses ----------
+   데스크톱에서는 경력표처럼 한 행에 표시하고,
+   좁은 화면에서는 정보 단위별로 줄을 바꾼다. */
+
+.course-form {
+  padding: 26px;
+  display: grid;
+  gap: 14px;
+}
+
+.course-form-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.course-list {
+  padding: 8px 18px;
+  display: grid;
+  gap: 0;
+}
+
+.course-row {
+  display: grid;
+  grid-template-columns: 130px 150px minmax(220px, 1fr) 220px auto;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 4px;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+
+.course-row:last-child {
+  border-bottom: none;
+}
+
+.course-row > * {
+  min-width: 0;
+}
+
+.course-main b,
+.course-main p,
+.course-tools {
+  overflow-wrap: anywhere;
+}
+
+.course-main span {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.course-actions {
+  min-width: max-content;
+}
+
+/* 태블릿 */
+@media (max-width: 960px) {
+  .course-row {
+    grid-template-columns: 110px 130px minmax(0, 1fr);
+    gap: 12px 16px;
+    align-items: start;
+  }
+
+  .course-tools {
+    grid-column: 3;
+  }
+
+  .course-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end !important;
+  }
+}
+
+/* 스마트폰 */
+@media (max-width: 620px) {
+  .courses-head-search {
+    width: 100% !important;
+    flex: 1 1 180px;
+  }
+
+  .course-form {
+    padding: 18px 16px;
+  }
+
+  .course-form-split {
+    grid-template-columns: 1fr;
+  }
+
+  .course-list {
+    padding: 4px 14px;
+  }
+
+  .course-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 12px;
+    padding: 18px 2px;
+    align-items: start;
+  }
+
+  .course-period {
+    grid-column: 1;
+  }
+
+  .course-type {
+    grid-column: 2;
+    text-align: right;
+  }
+
+  .course-main {
+    grid-column: 1 / -1;
+  }
+
+  .course-main > b {
+    font-size: calc(15px * var(--fs, 1)) !important;
+    line-height: 1.35;
+  }
+
+  .course-main p {
+    line-height: 1.55;
+  }
+
+  .course-tools {
+    grid-column: 1 / -1;
+    padding-top: 9px;
+    border-top: 1px dashed var(--line);
+    line-height: 1.5;
+  }
+
+  .course-tools::before {
+    content: 'TOOLS';
+    display: block;
+    margin-bottom: 3px;
+    color: var(--faint);
+    font-size: calc(9px * var(--fs, 1));
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .course-actions {
+    grid-column: 1 / -1;
+    min-width: 0;
+    justify-content: flex-start !important;
+    padding-top: 2px;
+  }
+
+  .course-actions .btn {
+    flex: 0 0 auto;
+  }
+}
