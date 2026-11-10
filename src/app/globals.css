@@ -1543,7 +1543,7 @@ body.edit-on .main-grid.gridlines .wgt{outline-offset:0}
 .toolrow > :last-child{margin-left:auto}
 .panel.flush{overflow:hidden;padding:4px 0}
 .board-list{padding:6px 0}
-.brow{display:grid;grid-template-columns:70px 1fr 90px 90px;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid var(--line);font-size:calc(13px*var(--fs,1));cursor:var(--cur-pointer,pointer);transition:.13s}
+.brow{display:grid;grid-template-columns:minmax(70px,max-content) minmax(0,1fr) 90px 90px;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid var(--line);font-size:calc(13px*var(--fs,1));cursor:var(--cur-pointer,pointer);transition:.13s}
 /* 제목 칸 안에서 태그를 오른쪽 끝에 (v2.0 사용자 요청 — 작성자 왼쪽).
    칸을 따로 만들면 행마다 그리드가 독립이라 작성자 열이 어긋난다 — 제목 칸 안에서 민다 */
 .brow .tcell{min-width:0;display:flex;align-items:center;gap:10px}
