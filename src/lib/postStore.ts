@@ -66,6 +66,8 @@ export interface Post {
   author: string;
   authorId: string;
   date: string;          // ISO
+  /** 실제 활동일 (YYYY-MM-DD) — Activities 게시판에서는 작성일 대신 표시·정렬에 사용 */
+  activityDate?: string;
   secret: boolean;       // 비밀글
   notice: boolean;       // 공지 고정
   fold: { type: FoldType; label?: string } | null; // 스포일러/수위 접기 (6.2)
