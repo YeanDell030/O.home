@@ -42,6 +42,8 @@ function WriteInner() {
   }, [board.cats.length]);
   const [secret, setSecret] = useState(false);
   const [notice, setNotice] = useState(false);
+  const isActivities = board.name.trim().toLowerCase() === 'activities';
+  const [activityDate, setActivityDate] = useState('');
   // 태그 (v2.0 사용자 요청) — 쉼표로 구분해 입력, 저장할 때 배열로
   const [tagsText, setTagsText] = useState('');
   const parseTags = (s: string) =>
@@ -76,6 +78,7 @@ function WriteInner() {
     // 에디터로 쓴 글을 수정하면 갑자기 태그가 보였다 (authored 없는 옛 글은 지금까지대로 HTML)
     setWriteMode(p.mode === 'md' ? 'md' : (p.authored === 'editor' ? 'editor' : 'html'));
     setCategory(p.category);
+    setActivityDate(p.activityDate ?? '');
     setSecret(p.secret); setNotice(p.notice);
     setFoldType(p.fold?.type ?? 'none'); setFoldLabel(p.fold?.label ?? '');
     setTagsText((p.tags ?? []).join(', '));
@@ -95,6 +98,7 @@ function WriteInner() {
 
   const post = () => {
     if (!title.trim() || !body.trim()) { toast('제목과 내용을 입력해 주세요'); return; }
+    if (isActivities && !activityDate) { toast('활동일을 입력해 주세요'); return; }
     if (editing) {
       // 수정 — 작성자 본인만 (관리자도 타인 글은 삭제만, v1.9). 작성자/날짜/댓글/소속 게시판은 유지
       if (editing.authorId !== user.id) { toast('수정은 작성자 본인만 할 수 있습니다'); return; }
@@ -104,6 +108,7 @@ function WriteInner() {
         mode: writeMode === 'md' ? 'md' : 'html',
         authored: writeMode === 'editor' ? 'editor' : undefined,
         category,
+        activityDate: isActivities ? activityDate : p.activityDate,
         secret, notice: isAdmin ? notice : p.notice,
         tags: parseTags(tagsText),
         fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
@@ -117,6 +122,7 @@ function WriteInner() {
       id: newId(), title: title.trim(), body,
       mode: writeMode === 'md' ? 'md' : 'html', category,
       author: user.nickname, authorId: user.id, date: new Date().toISOString(),
+      activityDate: isActivities ? activityDate : undefined,
       secret, notice: isAdmin && notice,
       tags: parseTags(tagsText),
       fold: foldType === 'none' ? null : { type: foldType, label: foldType === 'custom' ? foldLabel : undefined },
@@ -221,6 +227,13 @@ function WriteInner() {
               <KInput value={tagsText} onChange={e => setTagsText(e.target.value)}
                 placeholder="쉼표로 구분" style={{ flex: 1 }} />
             </div>
+            {isActivities && (
+              <div className="form-row">
+                <label className="k-label" style={{ width: 60 }}>활동일</label>
+                <KInput type="date" value={activityDate} onChange={e => setActivityDate(e.target.value)}
+                  style={{ flex: 1 }} />
+              </div>
+            )}
             <div style={{ display: 'grid', gap: 9 }}>
               <KCheck label="비밀글 (관리자와 나만 열람)" checked={secret} onChange={setSecret} />
               {isAdmin && <KCheck label="공지로 고정" checked={notice} onChange={setNotice} />}
