@@ -18,6 +18,7 @@ import { CroppedBlobImg, CropEditor, type CropValue } from '@/components/ui/Crop
 import { EditableDesc, PageTitle } from '@/components/ui/PageText';
 import { useSectionTitle } from '@/lib/sectionStore';
 import { ConfirmModal } from '@/components/ui/Modal';
+import { Lightbox } from '@/components/ui/Lightbox';
 
 function CharDetailInner() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,7 @@ function CharDetailInner() {
   const params = useSearchParams();
   const [tab, setTab] = useState('basic');
   const [artIdx, setArtIdx] = useState(0);
+  const [artLightboxOpen, setArtLightboxOpen] = useState(false);
   const [delAsk, setDelAsk] = useState(false);   // 캐릭터 삭제 확인
   const infoRef = useRef<HTMLDivElement>(null);
 
@@ -207,43 +209,123 @@ function CharDetailInner() {
           )}
         </div>
 
-        {/* 중앙 아트 — 스티키 · 추가 아트가 있으면 클릭으로 넘겨보기 */}
-        {(() => {
-          const arts = eff.arts && eff.arts.length > 0 ? eff.arts : (eff.artId ? [eff.artId] : []);
-          if (arts.length === 0 && !eff.artUrl) {
-            return <div className={`profile-center ph ${ch.thumbClass}`}><span>CHARACTER FULL ART</span></div>;
+        {/* 중앙 아트 — 평소에는 cover, 클릭하면 원본 Lightbox */}
+{(() => {
+  const arts =
+    eff.arts && eff.arts.length > 0
+      ? eff.arts
+      : eff.artId
+        ? [eff.artId]
+        : [];
+
+  const artSources =
+    arts.length > 0
+      ? arts
+      : eff.artUrl
+        ? [eff.artUrl]
+        : [];
+
+  if (artSources.length === 0) {
+    return (
+      <div
+        className={`profile-center ph ${ch.thumbClass}`}
+      >
+        <span>CHARACTER FULL ART</span>
+      </div>
+    );
+  }
+
+  const cur = Math.min(
+    artIdx,
+    artSources.length - 1
+  );
+
+  return (
+    <>
+      <div
+        className="profile-center"
+        ref={artBoxRef}
+        style={{ cursor: 'zoom-in' }}
+        onClick={() =>
+          setArtLightboxOpen(true)
+        }
+        onContextMenu={e => {
+          if (
+            !(
+              isAdmin ||
+              charGrant(ch, user?.id) ===
+                'edit'
+            ) ||
+            cur !== 0
+          ) {
+            return;
           }
-          const cur = Math.min(artIdx, arts.length - 1);
-          return (
-            <div className="profile-center" ref={artBoxRef}
-              style={{ cursor: arts.length > 1 ? 'pointer' : undefined }}
-              onClick={() => { if (arts.length > 1) setArtIdx(i => (i + 1) % arts.length); }}
-              /* 대표 아트 우클릭 → 이 화면에 보일 위치 조정 (관리자, v2.0 사용자 확정) */
-              onContextMenu={e => {
-                if (!(isAdmin || charGrant(ch, user?.id) === 'edit') || cur !== 0) return;
-                e.preventDefault();
-                setArtCtx({ x: e.clientX, y: e.clientY, ref: arts[0] });
-              }}>
-              {/* 지정한 크롭 위치를 여기서도 쓴다 — 예전에는 가운데 기준으로 잘려서
-                  리스트에서 맞춰 둔 위치와 다른 곳이 보였다 (대표 아트에만 적용) */}
-              {/* 리스트 썸네일 크롭은 3:4 기준이라 여기(화면 높이에 따라 비율이 달라지는 영역)에는
-                  맞지 않는다 — 여기서 따로 잡은 값이 있을 때만 쓰고, 없으면 가운데 기준 (v2.0) */}
-              <CroppedBlobImg fileRef={arts[cur] ?? eff.artUrl}
-                crop={cur === 0 ? eff.artCrop : undefined}
-                ph={ch.thumbClass} label="CHARACTER FULL ART" />
-              {arts.length > 1 && (
-                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 12, display: 'flex', justifyContent: 'center', gap: 5, zIndex: 3 }}>
-                  {arts.map((_, i) => (
-                    <i key={i} style={{
-                      width: i === cur ? 16 : 6, height: 6, borderRadius: 4,
-                      background: i === cur ? '#fff' : 'rgba(255,255,255,.45)', transition: '.2s',
-                    }} />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })()}
+
+          e.preventDefault();
+
+          setArtCtx({
+            x: e.clientX,
+            y: e.clientY,
+            ref: artSources[0],
+          });
+        }}
+      >
+        <CroppedBlobImg
+          fileRef={artSources[cur]}
+          crop={
+            cur === 0
+              ? eff.artCrop
+              : undefined
+          }
+          ph={ch.thumbClass}
+          label="CHARACTER FULL ART"
+        />
+
+        {artSources.length > 1 && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 12,
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 5,
+              zIndex: 3,
+            }}
+          >
+            {artSources.map((_, i) => (
+              <i
+                key={i}
+                style={{
+                  width:
+                    i === cur ? 16 : 6,
+                  height: 6,
+                  borderRadius: 4,
+                  background:
+                    i === cur
+                      ? '#fff'
+                      : 'rgba(255,255,255,.45)',
+                  transition: '.2s',
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {artLightboxOpen && (
+        <Lightbox
+          srcs={artSources}
+          index={cur}
+          onClose={() =>
+            setArtLightboxOpen(false)
+          }
+        />
+      )}
+    </>
+  );
+})()}
 
         {/* 우측 정보 패널 — 최상단 캐릭터 이름 크게 (v1.6) · AU면 그 AU의 이름·폰트 */}
         <div className="panel profile-info" ref={infoRef} style={{ fontFamily: familyOf(eff.bodyFontId) }}>
