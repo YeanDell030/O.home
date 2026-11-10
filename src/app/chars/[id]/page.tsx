@@ -52,6 +52,10 @@ function CharDetailInner() {
   // 편집 중인 아트 참조 + 그때 실제 표시 영역의 가로/세로 비 (3:4가 아니라 화면 높이에 따라 달라진다)
   const [artCropOpen, setArtCropOpen] = useState<{ ref: string; ratio: number } | null>(null);
   const artBoxRef = useRef<HTMLDivElement>(null);
+  const artDragStart = useRef<{
+  x: number;
+  y: number;
+} | null>(null);
   const artBoxRatio = () => {
     const r = artBoxRef.current?.getBoundingClientRect();
     return r && r.height > 1 ? r.width / r.height : 3 / 4;
@@ -243,12 +247,87 @@ function CharDetailInner() {
   return (
     <>
       <div
-        className="profile-center"
-        ref={artBoxRef}
-        style={{ cursor: 'zoom-in' }}
-        onClick={() =>
-          setArtLightboxOpen(true)
-        }
+  className="profile-center"
+  ref={artBoxRef}
+  style={{
+    cursor:
+      artSources.length > 1
+        ? 'grab'
+        : 'zoom-in',
+    touchAction: 'pan-y',
+    userSelect: 'none',
+  }}
+  onPointerDown={e => {
+    artDragStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+    };
+  }}
+  onPointerUp={e => {
+    const start =
+      artDragStart.current;
+
+    artDragStart.current = null;
+
+    if (!start) return;
+
+    const dx =
+      e.clientX - start.x;
+
+    const dy =
+      e.clientY - start.y;
+
+    const horizontalDrag =
+      Math.abs(dx) >= 50 &&
+      Math.abs(dx) >
+        Math.abs(dy);
+
+    /*
+     * 이미지가 여러 장이고
+     * 가로로 50px 이상 드래그한 경우
+     */
+    if (
+      artSources.length > 1 &&
+      horizontalDrag
+    ) {
+      if (dx < 0) {
+        // 왼쪽으로 드래그:
+        // 다음 이미지
+        setArtIdx(current =>
+          (current + 1) %
+          artSources.length
+        );
+      } else {
+        // 오른쪽으로 드래그:
+        // 이전 이미지
+        setArtIdx(current =>
+          (
+            current -
+            1 +
+            artSources.length
+          ) %
+          artSources.length
+        );
+      }
+
+      return;
+    }
+
+    /*
+     * 거의 움직이지 않은 경우에만
+     * 클릭으로 판단하여 원본 확대
+     */
+    const isClick =
+      Math.abs(dx) < 10 &&
+      Math.abs(dy) < 10;
+
+    if (isClick) {
+      setArtLightboxOpen(true);
+    }
+  }}
+  onPointerCancel={() => {
+    artDragStart.current = null;
+  }}
         onContextMenu={e => {
           if (
             !(
