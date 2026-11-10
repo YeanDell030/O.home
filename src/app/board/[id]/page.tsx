@@ -68,6 +68,10 @@ export default function BoardDetailPage() {
 
   const board = boards.find(b => b.id === (post.boardId ?? MAIN_BOARD_ID)) ?? boards[0];
   const boardTitle = board.id === MAIN_BOARD_ID ? 'BOARD' : board.name;
+  const isActivities = board.name.trim().toLowerCase() === 'activities';
+  const displayDate = isActivities && post.activityDate
+    ? post.activityDate.replaceAll('-', '.')
+    : fmtDate(post.date);
   // 댓글 권한 (5.2) — 방문자 허용 시 게스트 작성(닉네임+비밀번호, 방명록 4.7 규칙)
   const allow = (p: BoardPerm) => (p === 'admin' ? isAdmin : p === 'member' ? !!user : true);
   const guestMode = !user && board.permComment === 'guest';
@@ -151,7 +155,7 @@ export default function BoardDetailPage() {
     <section className="page">
       <div className="page-head">
         <PageTitle href={boardHref(board.id)}>{boardTitle}</PageTitle>
-        <p>{post.notice ? '공지 · ' : `${post.category} · `}{post.author} · {fmtDate(post.date)}</p>
+        <p>{post.notice ? '공지 · ' : `${post.category} · `}{post.author} · {displayDate}</p>
         <div className="head-actions">
           {/* 수정은 작성자 본인만 — 관리자도 타인 글은 삭제만 (v1.9) */}
           {isAuthor && (
@@ -168,7 +172,7 @@ export default function BoardDetailPage() {
           {post.secret && '🔒 '}{post.title}
         </h2>
         <p style={{ fontSize: 11, color: 'var(--faint)', marginBottom: 18 }}>
-          {post.author} · {fmtDate(post.date)} · {post.mode.toUpperCase()}
+          {post.author} · {displayDate} · {post.mode.toUpperCase()}
           {/* 태그 (v2.0 사용자 요청) — 목록과 같은 표기 */}
           {(post.tags ?? []).map(t => (
             <span key={t} style={{ marginLeft: 7, color: 'color-mix(in srgb,var(--accent) 65%,var(--faint))' }}>#{t}</span>
