@@ -32,6 +32,7 @@ function BoardInner() {
   const bid = params.get('b') ?? MAIN_BOARD_ID;
   const { boards, loaded: boardsLoaded } = useBoards();
   const board = boards.find(b => b.id === bid) ?? boards[0];
+  const isActivities = board.name.trim().toLowerCase() === 'activities';
   const [posts] = useLocalList<Post>('ohome.board.v1', BOARD_SEED);
   // 댓글 수 — 댓글은 글과 따로 저장된다 (v2.0). 옛 글 안에 남아 있던 것도 함께 센다
   const [cmtRows] = useLocalList<CommentRow>(COMMENT_KEY, COMMENT_SEED);
@@ -62,8 +63,9 @@ function BoardInner() {
     }
     // 공지 상단 고정 + 최신순
     return list.sort((a, b) =>
-      (b.notice ? 1 : 0) - (a.notice ? 1 : 0) || b.date.localeCompare(a.date));
-  }, [posts, board.id, cat, q]);
+      (b.notice ? 1 : 0) - (a.notice ? 1 : 0)
+      || (isActivities ? (b.activityDate ?? b.date).localeCompare(a.activityDate ?? a.date) : b.date.localeCompare(a.date)));
+  }, [posts, board.id, cat, q, isActivities]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PER_PAGE));
   const pageList = visible.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -78,6 +80,8 @@ function BoardInner() {
       {p.notice ? boardSet.system[0].label : p.secret ? boardSet.system[1].label : p.category}
     </span>
   );
+  const displayDate = (p: Post) =>
+    isActivities && p.activityDate ? p.activityDate.replaceAll('-', '.') : fmtDate(p.date);
 
   return (
     <section className="page">
@@ -121,7 +125,7 @@ function BoardInner() {
                     {canRead(p) ? <>{p.secret && '🔒 '}{p.title}</> : '🔒 비밀글입니다'}
                     {canRead(p) && cmtCount(p) > 0 && <span className="cmt">{cmtCount(p)}</span>}
                   </div>
-                  <div className="bt-meta">{p.author} · {fmtDate(p.date)}</div>
+                  <div className="bt-meta">{p.author} · {displayDate(p)}</div>
                 </div>
               </div>
             );
@@ -153,7 +157,7 @@ function BoardInner() {
                 )}
               </div>
               <span className="who">{p.author}</span>
-              <span className="dt">{fmtDate(p.date)}</span>
+              <span className="dt">{displayDate(p)}</span>
             </div>
           ))}
           {pageList.length === 0 && (
