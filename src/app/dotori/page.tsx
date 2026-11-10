@@ -24,6 +24,7 @@ function DotoriPageInner() {
   const [itemsAll, setItemsAll, loaded] = useLocalList<DotoriItem>('ohome.dotori.v1', DOTORI_SEED);
   // 여러 개로 만든 섹션 (v2.0) — 주소의 ?s= 가 가리키는 것만 보여 준다
   const sec = useSectionParam('dotori');
+  const isPublications = sec.name.trim().toLowerCase() === 'publications';
   const items = filterSection(itemsAll, sec.id);
   // 저장은 이 섹션 자리만 교체 — 걸러진 목록을 그대로 넘겨도 다른 섹션이 지워지지 않는다
   const setItems = sectionSetter(itemsAll, sec.id, setItemsAll);
@@ -42,14 +43,16 @@ function DotoriPageInner() {
 
   const query = q.trim().toLowerCase();
   const shown = items
-    .filter(it => (tab === 'all' ? it.status !== 'done' : it.status === tab)) // 완은 전체에서 숨김 (4.15)
+    .filter(it => (tab === 'all' ? (isPublications || it.status !== 'done') : it.status === tab)) // 도토리의 완만 전체에서 숨김
     .filter(it => !query
       || it.name.toLowerCase().includes(query)
       || it.writer.toLowerCase().includes(query)
+      || it.rule.toLowerCase().includes(query)
+      || it.people.toLowerCase().includes(query)
       || it.tags.some(t => t.toLowerCase().includes(query)));
 
   const countOf = (t: Tab) =>
-    items.filter(it => (t === 'all' ? it.status !== 'done' : it.status === t)).length;
+    items.filter(it => (t === 'all' ? (isPublications || it.status !== 'done') : it.status === t)).length;
 
   const setStatus = (id: string, s: DotoriStatus) =>
     setItems(items.map(x => (x.id === id ? { ...x, status: s } : x)));
@@ -95,7 +98,7 @@ function DotoriPageInner() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <SearchBar placeholder="시나리오·라이터·태그 검색" onSearch={setQ} />
+          <SearchBar placeholder={isPublications ? '논문·학술지·키워드 검색' : '시나리오·라이터·태그 검색'} onSearch={setQ} />
           {isAdmin && <button className="btn btn-dark" onClick={() => router.push('/dotori/new' + secQuery('dotori', sec.id))}>＋ ADD</button>}
         </div>
       </div>
@@ -139,14 +142,14 @@ function DotoriPageInner() {
               )}
             </div>
             <div className="bd">
-              {/* 이름 클릭 = 시나리오 링크 (새 탭) · 카드 클릭 = 편집 (관리자) */}
+              {/* 이름 클릭 = 외부 링크 (새 탭) · 카드 클릭 = 편집 (관리자) */}
               <b className={`nm ${it.link ? 'has-link' : ''}`}
                 onClick={e => { if (it.link) { e.stopPropagation(); window.open(it.link, '_blank'); } }}
-                data-tip={it.link ? '시나리오 링크 열기 (새 탭)' : undefined}>
+                data-tip={it.link ? (isPublications ? '논문 원문 열기 (새 탭)' : '시나리오 링크 열기 (새 탭)') : undefined}>
                 {it.name}
               </b>
               <small className="meta">
-                {[it.writer, it.rule, it.people].filter(Boolean).join(' · ')}
+                {(isPublications ? [it.writer, it.people] : [it.writer, it.rule, it.people]).filter(Boolean).join(' · ')}
               </small>
               {/* 태그가 없어도 줄은 남긴다 — 태그 유무로 카드 키가 달라지지 않게 (v2.0 사용자 요청) */}
               <div className="kw-row">
@@ -168,7 +171,7 @@ function DotoriPageInner() {
       {shown.length === 0 && (
         <div className="panel" style={{ textAlign: 'center', padding: 48 }}>
           <p style={{ fontSize: 13, color: 'var(--faint)' }}>
-            {query ? '검색 결과가 없습니다' : '이 탭에 도토리가 없습니다'}
+            {query ? '검색 결과가 없습니다' : (isPublications ? '등록된 논문이 없습니다' : '이 탭에 도토리가 없습니다')}
           </p>
         </div>
       )}

@@ -19,6 +19,7 @@ export default function DotoriEditPage() {
   // 큰 글씨 — 추가 섹션 항목이면 그 이름, 눌렀을 때도 그 목록으로 (v2.0 사용자 제보)
   const tt = useSectionTitle('dotori', items.find(x => x.id === id)?.secId, 'EDIT DOTORI');
   const it = items.find(x => x.id === id);
+  const isPublications = tt.title.trim().toLowerCase() === 'publications';
 
   if (!loaded) return <section className="page" />;
   if (!isAdmin || !it) {
@@ -32,12 +33,12 @@ export default function DotoriEditPage() {
   return (
     <section className="page">
       <div className="page-head"><PageTitle href={tt.href}>{tt.title}</PageTitle><p>{it.name}</p></div>
-      <DotoriForm initial={it}
-        onCancel={() => router.push('/dotori')}
+      <DotoriForm initial={it} mode={isPublications ? 'publications' : 'dotori'}
+        onCancel={() => router.push(tt.href)}
         onSave={v => {
           setItems(items.map(x => (x.id === it.id ? { ...x, ...v } : x)));
           toast('저장되었습니다');
-          router.push('/dotori');
+          router.push(tt.href);
         }} />
     </section>
   );

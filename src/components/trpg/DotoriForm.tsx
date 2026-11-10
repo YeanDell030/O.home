@@ -8,20 +8,22 @@ import { putBlob } from '@/lib/blobStore';
 import { useToast } from '@/components/ui/Toast';
 
 export interface DotoriFormValue {
-  name: string; writer: string; rule: string; people: string;
+  name: string; authors?: string; writer: string; rule: string; people: string;
   tags: string[]; link?: string; status: DotoriStatus;
   imgId?: string; thumbCrop?: CropValue;
 }
 
-export function DotoriForm({ initial, onSave, onCancel }: {
+export function DotoriForm({ initial, onSave, onCancel, mode = 'dotori' }: {
   initial: DotoriItem | null;
   onSave: (v: DotoriFormValue) => void;
   onCancel: () => void;
+  mode?: 'dotori' | 'publications';
 }) {
   const toast = useToast();
   const [trpgSet] = useTrpgSettings(); // 상태 라벨 (환경설정 > TRPG)
   const isNew = !initial;
   const [name, setName] = useState(initial?.name ?? '');
+  const [authors, setAuthors] = useState(initial?.authors ?? '');
   const [writer, setWriter] = useState(initial?.writer ?? '');
   const [rule, setRule] = useState(initial?.rule ?? '');
   const [people, setPeople] = useState(initial?.people ?? '');
@@ -34,11 +36,13 @@ export function DotoriForm({ initial, onSave, onCancel }: {
   const [removed, setRemoved] = useState(false);
   const [crop, setCrop] = useState<CropValue | undefined>(initial?.thumbCrop);
   const [cropOpen, setCropOpen] = useState(false);
+  const isPublications = mode === 'publications';
 
   const save = async () => {
-    if (!name.trim()) { toast('시나리오 이름을 입력해 주세요'); return; }
+    if (!name.trim()) { toast(isPublications ? '논문 제목을 입력해 주세요' : '시나리오 이름을 입력해 주세요'); return; }
     onSave({
-      name: name.trim(), writer: writer.trim(), rule: rule.trim(), people: people.trim(),
+      name: name.trim(), authors: isPublications ? (authors.trim() || undefined) : initial?.authors,
+      writer: writer.trim(), rule: rule.trim(), people: people.trim(),
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       link: link.trim() || undefined, status,
       imgId: file ? await putBlob(file) : (removed ? undefined : initial?.imgId),
@@ -58,7 +62,7 @@ export function DotoriForm({ initial, onSave, onCancel }: {
             ? <CropImg src={fileUrl} crop={crop} />
             : (!removed && initial?.imgId)
               ? <CroppedBlobImg fileRef={initial.imgId} crop={crop} ph="" />
-              : <div className="ph" style={{ position: 'absolute', inset: 0 }}><span style={{ fontSize: 10 }}>SCENARIO</span></div>}
+              : <div className="ph" style={{ position: 'absolute', inset: 0 }}><span style={{ fontSize: 10 }}>{isPublications ? 'PUBLICATION' : 'SCENARIO'}</span></div>}
         </div>
         <input id="dtImgF" type="file" accept="image/*" style={{ display: 'none' }}
           onChange={e => {
@@ -81,19 +85,26 @@ export function DotoriForm({ initial, onSave, onCancel }: {
       {/* 우: 정보 + 저장 */}
       <div>
         <div className="panel widget" style={{ marginBottom: 14 }}>
-          <h4>시나리오</h4>
+          <h4>{isPublications ? 'PUBLICATION' : '시나리오'}</h4>
           <div style={{ display: 'grid', gap: 9 }}>
-            <KInput placeholder="시나리오 이름" value={name} onChange={e => setName(e.target.value)} />
+            <KInput placeholder={isPublications ? '논문 제목' : '시나리오 이름'} value={name} onChange={e => setName(e.target.value)} />
+            {isPublications && (
+              <KInput placeholder="저자 — 예: Ye-Eun Kim, Phil-Joong Kim, Soo-Mi Choi" value={authors} onChange={e => setAuthors(e.target.value)} />
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
-              <KInput placeholder="라이터" value={writer} onChange={e => setWriter(e.target.value)} />
-              <KInput placeholder="룰" value={rule} onChange={e => setRule(e.target.value)} style={{ maxWidth: 130 }} />
-              <KInput placeholder="인원" value={people} onChange={e => setPeople(e.target.value)} style={{ maxWidth: 90 }} />
+              <KInput placeholder={isPublications ? '학술지 / 출판처' : '라이터'} value={writer} onChange={e => setWriter(e.target.value)} />
+              <KInput placeholder={isPublications ? '권(호) / 페이지' : '룰'} value={rule} onChange={e => setRule(e.target.value)} style={{ maxWidth: isPublications ? 180 : 130 }} />
+              <KInput placeholder={isPublications ? '연도' : '인원'} value={people} onChange={e => setPeople(e.target.value)} style={{ maxWidth: 90 }} />
             </div>
-            <KInput placeholder="태그 — 쉼표로 구분" value={tags} onChange={e => setTags(e.target.value)} />
-            <KInput placeholder="링크 (선택)" value={link} onChange={e => setLink(e.target.value)} />
+            <KInput placeholder={isPublications ? '키워드 — 쉼표로 구분' : '태그 — 쉼표로 구분'} value={tags} onChange={e => setTags(e.target.value)} />
+            <KInput placeholder={isPublications ? 'DOI 또는 논문 원문 링크 (선택)' : '링크 (선택)'} value={link} onChange={e => setLink(e.target.value)} />
             <KSelect value={status} onChange={v => setStatus(v as DotoriStatus)}
               options={DOTORI_STATUS_KEYS.map(s => ({ value: s, label: trpgSet.statuses[s].label }))} />
-            <p className="hint" style={{ margin: 0 }}>뱃지는 공수표·일정 확정만 카드에 표시 — 완은 완 탭에서만 보입니다</p>
+            <p className="hint" style={{ margin: 0 }}>
+              {isPublications
+                ? '논문 제목을 클릭하면 DOI 또는 원문 링크가 새 탭에서 열립니다'
+                : '뱃지는 공수표·일정 확정만 카드에 표시 — 완은 완 탭에서만 보입니다'}
+            </p>
           </div>
         </div>
         <div className="form-actions">

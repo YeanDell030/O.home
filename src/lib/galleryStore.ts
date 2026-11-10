@@ -211,6 +211,7 @@ export interface DotoriItem {
   secId?: string;
   id: string;
   name: string;              // 시나리오 이름 (필수)
+  authors?: string;          // Publications 섹션 저자 표기
   writer: string;            // 라이터
   rule: string;              // 룰(시스템)
   people: string;            // 인원 표기
