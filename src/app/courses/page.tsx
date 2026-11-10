@@ -453,6 +453,7 @@ export default function CoursesPage() {
 
         <div className="head-actions">
           <KInput
+            className="courses-head-search"
             value={query}
             placeholder="강의·학교·프로그램 검색"
             onChange={event =>
@@ -480,10 +481,7 @@ export default function CoursesPage() {
           style={{
             maxWidth: 760,
             margin: '0 auto 22px',
-            padding: 26,
-            display: 'grid',
-            gap: 14,
-          }}
+            }}
         >
           <h3 style={{ margin: 0 }}>
             {editId
@@ -491,14 +489,7 @@ export default function CoursesPage() {
               : 'ADD COURSE'}
           </h3>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                '1fr 1fr',
-              gap: 12,
-            }}
-          >
+          <div className="course-form-split">
             <div>
               <label className="k-label">
                 Period
@@ -677,14 +668,7 @@ export default function CoursesPage() {
         </div>
       )}
 
-      <div
-        className="panel"
-        style={{
-          padding: '8px 18px',
-          display: 'grid',
-          gap: 0,
-        }}
-      >
+      <div className="panel course-list">
         {shown.map(course => {
           const courseIndex =
             courses.findIndex(
@@ -719,18 +703,9 @@ export default function CoursesPage() {
           return (
             <div
               key={course.id}
-              style={{
-                display: 'grid',
-                gridTemplateColumns:
-                  '130px 150px minmax(220px, 1fr) 220px auto',
-                gap: 18,
-                alignItems: 'center',
-                padding: '18px 4px',
-                borderBottom:
-                  '1px solid var(--line)',
-              }}
+              className="course-row"
             >
-              <div>
+              <div className="course-period">
                 <small
                   style={{
                     display: 'block',
@@ -749,7 +724,7 @@ export default function CoursesPage() {
                 </b>
               </div>
 
-              <div>
+              <div className="course-type">
                 <span
                   style={{
                     display:
@@ -775,7 +750,7 @@ export default function CoursesPage() {
                 </span>
               </div>
 
-              <div>
+              <div className="course-main">
                 <b
                   style={{
                     display: 'block',
@@ -843,6 +818,7 @@ export default function CoursesPage() {
               </div>
 
               <div
+                className="course-tools"
                 style={{
                   fontSize: 12,
                   color: 'var(--sub)',
@@ -853,6 +829,7 @@ export default function CoursesPage() {
               </div>
 
               <div
+                className="course-actions"
                 style={{
                   display: 'flex',
                   gap: 7,
