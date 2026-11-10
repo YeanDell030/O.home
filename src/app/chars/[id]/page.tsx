@@ -142,7 +142,7 @@ function CharDetailInner() {
         {/* 제목 자리는 메뉴 이름 — 클릭 시 목록 복귀. 캐릭터 이름은 우측 프로필 패널에 크게 표시 */}
         <PageTitle href={tt.href}>{tt.title}</PageTitle>
         {/* 캐릭터별로 별도 저장 — 키에 캐릭터 id 포함 */}
-        <EditableDesc k={`char-detail-desc:${ch.id}`} def="좌측 아이콘 탭 → 우측 정보 전환" />
+        <EditableDesc k={`char-detail-desc:${ch.id}`} def="Click: enlarge | Swipe: browse images" />
         <div className="head-actions">
           {/* 관리자 또는 「편집까지」 권한 회원 (3차 회원-캐릭터 연결, v1.9)
               — AU 선택 상태의 EDIT은 그 AU 전용 프로필 편집으로 진입 */}
