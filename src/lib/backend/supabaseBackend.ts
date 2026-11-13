@@ -24,7 +24,7 @@ export async function createSupabaseBackend(
 
   let realtimeSeq = 0;
 
-  const toUser = async (u: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null | undefined): Promise<BackendUser | null> => {
+  const toUser = async (u: { id: string; email?: string; user_metadata?: Record<string, unknown>; last_sign_in_at?: string } | null | undefined): Promise<BackendUser | null> => {
     if (!u) return null;
     const { data: prof } = await sb.from('profiles')
       .select('nickname, role, avatar_url, avatar_color').eq('id', u.id).maybeSingle();
@@ -35,6 +35,7 @@ export async function createSupabaseBackend(
       email: u.email,
       avatarUrl: prof?.avatar_url ?? undefined,
       avatarColor: prof?.avatar_color ?? undefined,
+      lastSignInAt: u.last_sign_in_at,
     };
   };
 
@@ -100,6 +101,11 @@ export async function createSupabaseBackend(
     },
 
     async signOut() { await sb.auth.signOut(); },
+
+    async signOutOthers() {
+      const { error } = await sb.auth.signOut({ scope: 'others' });
+      return error ? { ok: false, error: error.message } : { ok: true };
+    },
 
     async resetPassword(email) {
       const { error } = await sb.auth.resetPasswordForEmail(email);

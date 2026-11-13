@@ -1621,9 +1621,26 @@ function RelQPane() {
   );
 }
 
+function deviceSummary(): string {
+  if (typeof navigator === 'undefined') return '기기 정보를 확인하는 중';
+  const ua = navigator.userAgent;
+  const os = /Windows/i.test(ua) ? 'Windows PC'
+    : /iPhone/i.test(ua) ? 'iPhone'
+      : /iPad/i.test(ua) ? 'iPad'
+        : /Android/i.test(ua) ? 'Android 기기'
+          : /Macintosh|Mac OS X/i.test(ua) ? 'Mac'
+            : /Linux/i.test(ua) ? 'Linux PC' : '현재 기기';
+  const browser = /Edg\//.test(ua) ? 'Edge'
+    : /Firefox\//.test(ua) ? 'Firefox'
+      : /Chrome\//.test(ua) ? 'Chrome'
+        : /Safari\//.test(ua) ? 'Safari' : '웹 브라우저';
+  return `${os} · ${browser}`;
+}
+
 /** 회원/보안 탭 (5.2, v1.9 mock 범위) — 가입코드 변경 + 회원 목록(가입 계정 삭제).
  *  그룹별 권한 매트릭스·가입 승인제·비밀번호 정책은 Supabase 연동 시 확장 */
 function MemberPane() {
+  const { user, logoutOtherDevices, mock } = useAuth();
   const toast = useToast();
   const del = useConfirmDelete();
   const router = useRouter();   // 회원 이름 클릭 → 회원 정보 페이지 (v1.9)
@@ -1631,7 +1648,10 @@ function MemberPane() {
   const [codeLoaded, setCodeLoaded] = useState(false);
   const [regVer, setRegVer] = useState(0);   // 가입 계정 삭제 후 목록 갱신용
   const [removedIds, setRemovedIds] = useState<string[]>([]);   // 서버 모드에서 방금 지운 회원
+  const [device, setDevice] = useState('기기 정보를 확인하는 중');
+  const [revoking, setRevoking] = useState(false);
   useEffect(() => { setCode(inviteCode()); setCodeLoaded(true); }, []);
+  useEffect(() => { setDevice(deviceSummary()); }, []);
   void regVer;
 
   const members = useMembers();
@@ -1702,6 +1722,45 @@ function MemberPane() {
             }}>SAVE</button>
         </div>
       </div>
+
+      <h3 style={{ marginTop: 26 }}>로그인 기기</h3>
+      <div className="d">현재 로그인 정보 확인 및 다른 컴퓨터의 로그인 연결 해제</div>
+      <div className="set-row" style={{ flexWrap: 'wrap' }}>
+        <div className="l">
+          <b>현재 기기</b>
+          <small>
+            {device}
+            {user?.lastSignInAt
+              ? ` — 최근 로그인 ${new Date(user.lastSignInAt).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })}`
+              : ''}
+          </small>
+        </div>
+        <span className="pill dark">현재 세션</span>
+      </div>
+      <div className="set-row" style={{ flexWrap: 'wrap' }}>
+        <div className="l">
+          <b>다른 모든 기기에서 로그아웃</b>
+          <small>
+            현재 기기는 유지하고 다른 컴퓨터·휴대전화의 로그인 갱신 권한을 해제합니다.
+            이미 열린 화면은 기존 인증 만료까지 잠시 유지될 수 있습니다.
+          </small>
+        </div>
+        <button className="btn btn-ghost" disabled={revoking || mock}
+          onClick={async () => {
+            if (!window.confirm('현재 기기를 제외한 다른 모든 기기에서 로그아웃하시겠습니까?')) return;
+            setRevoking(true);
+            const r = await logoutOtherDevices();
+            setRevoking(false);
+            toast(r.ok ? '다른 모든 기기의 로그인 연결을 해제했습니다' : (r.error ?? '로그인 연결을 해제하지 못했습니다'));
+          }}>
+          {revoking ? '처리 중…' : 'LOG OUT OTHER DEVICES'}
+        </button>
+      </div>
+      {mock && (
+        <div className="d" style={{ marginTop: -4 }}>
+          로컬 계정 모드에서는 기기별 로그인 연결을 관리할 수 없습니다.
+        </div>
+      )}
 
       <h3 style={{ marginTop: 26 }}>회원 목록</h3>
       <div className="d">기본 계정(관리자·지인회원)은 삭제할 수 없습니다 — 태그로 그룹화</div>

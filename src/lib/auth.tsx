@@ -15,6 +15,7 @@ export interface User {
   avatarUrl?: string;    // 프로필 이미지 (파일 참조 또는 URL)
   avatarColor?: string;  // 단색 아바타 (이미지 없을 때)
   email?: string;
+  lastSignInAt?: string;
 }
 
 type Result = { ok: boolean; error?: string };
@@ -27,6 +28,7 @@ interface AuthCtx {
   findId: (email: string) => Promise<Result & { foundId?: string }>;
   resetPassword: (email: string) => Promise<Result & { tempPassword?: string }>;
   logout: () => Promise<void>;
+  logoutOtherDevices: () => Promise<Result>;
   updateProfile: (patch: { nickname?: string; avatarUrl?: string | null; avatarColor?: string | null; currentPassword?: string; newPassword?: string }) => Promise<Result>;
   /** 서버(DB) 연결 없이 브라우저 계정으로 도는 중인지 — 개발·오프라인 */
   mock: boolean;
@@ -213,6 +215,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try { localStorage.removeItem(MOCK_KEY); } catch { /* 무시 */ }
   }, [server, be]);
 
+  const logoutOtherDevices = useCallback(async (): Promise<Result> => {
+    if (!server || !be) {
+      return { ok: false, error: '로컬 계정에서는 다른 기기 세션을 관리할 수 없습니다.' };
+    }
+    return be.signOutOthers();
+  }, [server, be]);
+
   // 관리자면 body.admin — 페이지 설명 편집 연필 등
   // 저장 계층이 훅 밖에서 작성자 id를 알 수 있게 함께 기록
   useEffect(() => {
@@ -223,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{
       user, isAdmin: user?.role === 'admin', ready,
-      login, signup, findId, resetPassword, logout, updateProfile, mock: !server,
+      login, signup, findId, resetPassword, logout, logoutOtherDevices, updateProfile, mock: !server,
     }}>
       {children}
     </Ctx.Provider>

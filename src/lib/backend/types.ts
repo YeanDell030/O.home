@@ -25,6 +25,8 @@ export interface BackendUser {
   email?: string;
   avatarUrl?: string;
   avatarColor?: string;
+  /** 인증 서비스가 알려 주는 최근 로그인 시각 */
+  lastSignInAt?: string;
 }
 
 /** 연결·규칙 점검 결과 (설치 화면의 [연결 확인]) */
@@ -50,6 +52,8 @@ export interface Backend {
   signIn(id: string, password: string): Promise<{ ok: boolean; error?: string }>;
   signUp(id: string, password: string, nickname: string): Promise<{ ok: boolean; error?: string }>;
   signOut(): Promise<void>;
+  /** 현재 브라우저를 유지한 채 다른 기기의 갱신 토큰을 폐기한다. */
+  signOutOthers(): Promise<{ ok: boolean; error?: string }>;
   resetPassword(email: string): Promise<{ ok: boolean; error?: string }>;
   updateProfile(patch: { nickname?: string; avatarUrl?: string | null; avatarColor?: string | null }): Promise<{ ok: boolean; error?: string }>;
   /** 첫 계정을 이 홈의 관리자로 등록 (관리자가 아직 없을 때만) */

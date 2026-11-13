@@ -215,6 +215,13 @@ export async function createFirebaseBackend(cfg: FirebaseCfg): Promise<Backend> 
 
     async signOut() { await authMod.signOut(auth); },
 
+    async signOutOthers() {
+      return {
+        ok: false,
+        error: 'Firebase에서는 웹사이트에서 다른 기기의 세션을 해제할 수 없습니다.',
+      };
+    },
+
     async resetPassword(email) {
       try {
         await authMod.sendPasswordResetEmail(auth, email);
